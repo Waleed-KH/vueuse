@@ -7,7 +7,8 @@ export type StopwatchState = 'inactive' | 'active' | 'paused'
 export interface UseStopwatchFnOptions {
   immediate?: boolean
   interval?: 'requestAnimationFrame' | number
-  intervalRound?: boolean | 'truncate'
+  timeRound?: boolean | 'up'
+  callback?: (time: number, timestamp: number) => void
 }
 
 function roundTime(time: number, interval: number, truncate = false) {
@@ -21,7 +22,8 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   const {
     immediate = true,
     interval = 1000,
-    intervalRound = true,
+    timeRound = true,
+    callback,
   } = options
 
   const {
@@ -33,12 +35,17 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
     interval,
     immediate,
     controls: true,
+    callback: callback ? callbackInvoke : undefined,
   })
 
   const acumTime = ref(0)
   const state = computed<StopwatchState>(() => isActive.value ? 'active' : (acumTime.value) ? 'paused' : 'inactive')
   const startTime = ref(now.value)
   const time = computed(() => acumTime.value + (isActive.value ? now.value - startTime.value : 0))
+
+  function callbackInvoke(t: number) {
+    callback!(time.value, t)
+  }
 
   function reset() {
     startTime.value = now.value = timestamp()
@@ -51,7 +58,9 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   }
 
   function pause() {
-    acumTime.value = time.value
+    const tn = timestamp()
+    acumTime.value += (tn - startTime.value)
+    callback?.(acumTime.value, tn)
     tPause()
   }
 
@@ -69,7 +78,7 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   }
 
   return {
-    time: isNumber(interval) && intervalRound ? computed(() => roundTime(time.value, interval, intervalRound === 'truncate')) : time,
+    time: (isNumber(interval) && timeRound) ? computed(() => roundTime(time.value, interval, timeRound !== 'up')) : time,
     state,
     start,
     pause,
