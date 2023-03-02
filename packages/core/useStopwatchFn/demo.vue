@@ -1,8 +1,7 @@
 <script setup lang="ts">
-// import { ref } from 'vue'
-import { StopwatchState, useStopwatchFn } from '@vueuse/core'
+import { useStopwatchFn } from '@vueuse/core'
 
-const { timespan, start, stop, pause, resume, state } = useStopwatchFn({ interval: 100, immediate: false })
+const { time, start, stop, pause, resume, state } = useStopwatchFn({ interval: 10, immediate: false })
 </script>
 
 <template>
@@ -11,18 +10,18 @@ const { timespan, start, stop, pause, resume, state } = useStopwatchFn({ interva
       <span class="mr-5px text-18px">Time (ms): </span>
     </div>
     <p class="text-20px font-bold text-emerald-500">
-      {{ timespan }}
+      {{ time }}
     </p>
     <button @click="start">
-      {{ state === StopwatchState.Inactive ? 'Start' : 'Reset' }}
+      {{ state === 'inactive' ? 'Start' : 'Reset' }}
     </button>
-    <button v-if="state !== StopwatchState.Inactive" class="red" @click="stop">
+    <button v-if="state !== 'inactive'" class="red" @click="stop">
       Stop
     </button>
-    <button v-if="state === StopwatchState.Active" class="orange" @click="pause">
+    <button v-if="state === 'active'" class="orange" @click="pause">
       Pause
     </button>
-    <button v-if="state === StopwatchState.Paused" class="orange" @click="resume">
+    <button v-if="state === 'paused'" class="orange" @click="resume">
       Resume
     </button>
   </div>
