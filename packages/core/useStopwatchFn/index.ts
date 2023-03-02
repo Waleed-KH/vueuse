@@ -7,20 +7,21 @@ export type StopwatchState = 'inactive' | 'active' | 'paused'
 export interface UseStopwatchFnOptions {
   immediate?: boolean
   interval?: 'requestAnimationFrame' | number
+  intervalRound?: boolean | 'truncate'
 }
 
-function roundTime(time: number, interval: number) {
+function roundTime(time: number, interval: number, truncate = false) {
   const diff = time % interval
-  const rc = (interval - diff) / interval
   const rt = time - diff
 
-  return (rc >= 0.35) ? rt : rt + interval
+  return (truncate || ((interval - Math.abs(diff)) / interval) > 0.5) ? rt : rt + interval * Math.sign(time)
 }
 
 export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   const {
     immediate = true,
     interval = 1000,
+    intervalRound = true,
   } = options
 
   const {
@@ -37,10 +38,10 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   const acumTime = ref(0)
   const state = computed<StopwatchState>(() => isActive.value ? 'active' : (acumTime.value) ? 'paused' : 'inactive')
   const startTime = ref(now.value)
-  const timespan = computed(() => acumTime.value + (isActive.value ? now.value - startTime.value : 0))
+  const time = computed(() => acumTime.value + (isActive.value ? now.value - startTime.value : 0))
 
   function reset() {
-    now.value = startTime.value = timestamp()
+    startTime.value = now.value = timestamp()
     acumTime.value = 0
   }
 
@@ -50,7 +51,7 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   }
 
   function pause() {
-    acumTime.value = timespan.value
+    acumTime.value = time.value
     tPause()
   }
 
@@ -58,7 +59,7 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
     if (isActive.value)
       return
 
-    now.value = startTime.value = timestamp()
+    startTime.value = now.value = timestamp()
     tResume()
   }
 
@@ -68,9 +69,7 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   }
 
   return {
-    timespan: isNumber(interval)
-      ? computed(() => roundTime(timespan.value, interval))
-      : timespan,
+    time: isNumber(interval) && intervalRound ? computed(() => roundTime(time.value, interval, intervalRound === 'truncate')) : time,
     state,
     start,
     pause,
