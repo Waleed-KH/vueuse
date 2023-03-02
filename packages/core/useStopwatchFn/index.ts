@@ -2,11 +2,7 @@ import { computed, ref } from 'vue-demi'
 import { isNumber, timestamp } from '@vueuse/shared'
 import { useTimestamp } from '../useTimestamp'
 
-export enum StopwatchState {
-  Inactive,
-  Active,
-  Paused,
-}
+export type StopwatchState = 'inactive' | 'active' | 'paused'
 
 export interface UseStopwatchFnOptions {
   immediate?: boolean
@@ -39,7 +35,7 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   })
 
   const acumTime = ref(0)
-  const state = computed(() => isActive.value ? StopwatchState.Active : acumTime.value ? StopwatchState.Paused : StopwatchState.Inactive)
+  const state = computed<StopwatchState>(() => isActive.value ? 'active' : (acumTime.value) ? 'paused' : 'inactive')
   const startTime = ref(now.value)
   const timespan = computed(() => acumTime.value + (isActive.value ? now.value - startTime.value : 0))
 
