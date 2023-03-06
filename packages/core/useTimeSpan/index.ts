@@ -55,9 +55,15 @@ export interface TimeSpan {
    */
   formatted: ComputedRef<string>
   /**
-   * Converts the value of the TimeSpan object to its equivalent string representation by using the specified format.
+   * Set the default format that will be used in `formatted` property.
    *
    * @param format A format string.
+   */
+  setDefaultFormat(format: string): void
+  /**
+   * Converts the value of the TimeSpan object to its equivalent string representation by using the specified format.
+   *
+   * @param format A format string, when not defined, it will use the default format.
    */
   toString(format?: string): string
 }
@@ -99,6 +105,8 @@ export const formatTimeSpan = (ts: TimeSpan, formatStr: string) => {
 
 const REGEX_SPARSE = /^([+-])?(?:(\d+(?:\.\d+)?)d)?(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)m)?(?:(\d+(?:\.\d+)?)s)?(?:(\d+(?:\.\d+)?)ms)?$/i
 const REGEX_TPARSE = /^([+-])?(?:(?:(\d+)(?:\.|:))?(\d{1,2}):)?(\d{1,2}):(\d{1,2})(?:(?:\.|:)(\d+))?$/
+
+const DEFAULT_FORMAT = '-[d\\.]hh:mm:ss[\\.fff]'
 
 /**
  * Get reactive TimeSpan object that represents a time interval value in days, hours, minutes, seconds, and fractions of a second.
@@ -154,6 +162,8 @@ export function useTimeSpan(value: MaybeComputedRef<number>, ...args: number[]):
             ? ((value as number) * msHour + args[0] * msMinute + args[1] * msSecond)
             : ((value as number) * msDay + args[0] * msHour + args[1] * msMinute + args[2] * msSecond + (args[3] ?? 0)))
 
+  let defaultFormat = DEFAULT_FORMAT
+
   const ts: TimeSpan = {
     totalMilliseconds: ms,
     totalSeconds: computed(() => ms.value / msSecond),
@@ -165,8 +175,9 @@ export function useTimeSpan(value: MaybeComputedRef<number>, ...args: number[]):
     minutes: computed(() => Math.trunc(ts.totalMinutes.value) % minHour),
     hours: computed(() => Math.trunc(ts.totalHours.value) % hrDay),
     days: computed(() => Math.trunc(ts.totalDays.value)),
+    setDefaultFormat: f => defaultFormat = f,
     formatted: computed(() => ts.toString()),
-    toString(format = '-[d\\.]hh:mm:ss[\\.fff]') {
+    toString(format = defaultFormat) {
       return formatTimeSpan(ts, format)
     },
   }
