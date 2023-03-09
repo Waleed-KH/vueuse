@@ -1,19 +1,11 @@
 import { computed, ref } from 'vue-demi'
-import { type MaybeComputedRef, isNumber, isObject, resolveRef, timestamp, useIntervalFn } from '@vueuse/shared'
-import { useRafFn } from '../useRafFn'
+import { type MaybeComputedRef, isObject, resolveRef } from '@vueuse/shared'
+import { type StopwatchState, type UseStopwatchFnOptions, useStopwatchFn } from '../useStopwatchFn'
 import { type TimeSpan, useTimeSpan } from '../useTimeSpan'
 
-export enum TimerState {
-  Inactive,
-  Active,
-  Paused,
-  Finished,
-}
+export type TimerState = StopwatchState | 'finished'
 
-export interface UseTimerOptions {
-  immediate?: boolean
-  interval?: 'requestAnimationFrame' | number
-  intervalRound?: boolean
+export interface UseTimerOptions extends UseStopwatchFnOptions {
   stopOnFinish?: boolean
 }
 
@@ -27,83 +19,49 @@ function roundTime(time: number, interval: number) {
 
 export function useTimer(time: MaybeComputedRef<number> | TimeSpan, options: UseTimerOptions = {}) {
   const {
-    immediate = true,
-    interval = 1000,
-    intervalRound = true,
     stopOnFinish = true,
   } = options
 
-  const now = ref(timestamp())
-  const initialTime = (isObject(time) && 'totalMilliseconds' in time) ? time.totalMilliseconds : resolveRef(time)
-  const state = ref(TimerState.Inactive)
-  const startTime = ref(now.value)
-  const finishTime = ref(startTime.value + initialTime.value)
-  const timespan = computed(() => finishTime.value - now.value)
-  const remainingTime = ref(0)
+  const {
+    time: rTime,
+    state: rState,
+    start: rStart,
+    pause,
+    resume,
+    stop: rStop,
+  } = useStopwatchFn({ ...options, callback: update })
 
-  const update = () => {
-    now.value = timestamp()
+  const itime = (isObject(time) && 'totalMilliseconds' in time) ? time.totalMilliseconds : resolveRef(time)
+  const finished = ref(itime.value <= 0)
+  const stime = computed(() => (finished.value && stopOnFinish) ? 0 : itime.value - rTime.value)
+  const state = computed<TimerState>(() => finished.value ? 'finished' : rState.value)
 
-    if (state.value !== TimerState.Finished && timespan.value <= 0)
-      finish()
-  }
-
-  const controls = interval === 'requestAnimationFrame'
-    ? useRafFn(update, { immediate: false })
-    : useIntervalFn(update, interval, { immediate: false })
-
-  function reset() {
-    now.value = timestamp()
-    startTime.value = now.value
-    finishTime.value = startTime.value + initialTime.value
-    remainingTime.value = 0
-  }
-
-  function start() {
-    reset()
-    state.value = TimerState.Active
-    controls.resume()
-  }
-
-  function pause() {
-    remainingTime.value = initialTime.value - timespan.value
-    state.value = TimerState.Paused
-    controls.pause()
-  }
-
-  function resume() {
-    now.value = timestamp()
-    startTime.value = now.value
-    finishTime.value = startTime.value + remainingTime.value
-    state.value = TimerState.Active
-    controls.resume()
-  }
-
-  function stop() {
-    reset()
-    state.value = TimerState.Inactive
-    controls.pause()
-  }
-
-  function finish() {
-    state.value = TimerState.Finished
-    if (stopOnFinish) {
-      controls.pause()
-      now.value = finishTime.value
+  function update() {
+    if (!finished.value && stime.value <= 0) {
+      finished.value = true
+      if (stopOnFinish)
+        rStop()
     }
   }
 
-  if (immediate)
-    start()
+  function reset() {
+    finished.value = false
+  }
+
+  const timespan = useTimeSpan(stime)
 
   return {
-    timespan: useTimeSpan((isNumber(interval) && intervalRound)
-      ? computed(() => roundTime(timespan.value, interval))
-      : timespan),
+    timespan,
     state,
-    start,
+    start() {
+      reset()
+      rStart()
+    },
     pause,
     resume,
-    stop,
+    stop() {
+      reset()
+      rStop()
+    },
   }
 }
