@@ -11,11 +11,11 @@ export interface UseStopwatchFnOptions {
   callback?: (time: number, timestamp: number) => void
 }
 
-function roundTime(time: number, interval: number, truncate = false) {
+function roundTime(time: number, interval: number, trunc = false) {
   const diff = time % interval
   const rt = time - diff
 
-  return (truncate || ((interval - Math.abs(diff)) / interval) > 0.5) ? rt : rt + interval * Math.sign(time)
+  return (trunc || ((interval - Math.abs(diff)) / interval) > 0.5) ? rt : rt + interval * Math.sign(time)
 }
 
 export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
@@ -58,10 +58,10 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   }
 
   function pause() {
+    tPause()
     const tn = timestamp()
     acumTime.value += (tn - startTime.value)
     callback?.(acumTime.value, tn)
-    tPause()
   }
 
   function resume() {
@@ -73,8 +73,8 @@ export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   }
 
   function stop() {
-    reset()
     tPause()
+    reset()
   }
 
   return {
