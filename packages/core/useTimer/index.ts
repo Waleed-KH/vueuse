@@ -7,19 +7,13 @@ export type TimerState = StopwatchState | 'finished'
 
 export interface UseTimerOptions extends UseStopwatchFnOptions {
   stopOnFinish?: boolean
-}
-
-function roundTime(time: number, interval: number) {
-  const diff = time % interval
-  const rc = (interval - diff) / interval
-  const rt = time - diff
-
-  return (rc >= 0.35) ? rt : rt + interval
+  defaultFormat?: string
 }
 
 export function useTimer(time: MaybeComputedRef<number> | TimeSpan, options: UseTimerOptions = {}) {
   const {
     stopOnFinish = true,
+    defaultFormat = '-[HH\\:]mm:ss.ff',
   } = options
 
   const {
@@ -49,6 +43,8 @@ export function useTimer(time: MaybeComputedRef<number> | TimeSpan, options: Use
   }
 
   const timespan = useTimeSpan(stime)
+  if (defaultFormat)
+    timespan.setDefaultFormat(defaultFormat)
 
   return {
     timespan,
