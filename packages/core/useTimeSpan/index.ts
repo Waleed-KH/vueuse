@@ -75,21 +75,33 @@ export interface TimeSpan {
 // Branch Reset exp => (?|'([^']+)'|\\(.))
 // Lookbehind exp => ((?<=')[^']+(?=')|(?<=\\).)
 const REGEX_LITERAL = /(?:'([^']+)'|\\(.))/
-const REGEX_SYMBOLS = /[+-]|d+|h{1,2}|m{1,2}|s{1,2}|S+|f{1,3}/
+const REGEX_SYMBOLS = /[+-]|(?:d|D|H|M|S)+|(?:h|m|s){1,2}|f{1,3}/
 const REGEX_FORMAT = new RegExp(`${REGEX_LITERAL.source}|${REGEX_SYMBOLS.source}`, 'g')
 const REGEX_OPT_FORMAT = new RegExp(`\\[${REGEX_LITERAL.source}?(${REGEX_SYMBOLS.source})${REGEX_LITERAL.source}?]`, 'g')
 
-const matches: Record<string, (ts: TimeSpan, pad: number, opt?: boolean) => string> = {
+function fprint(n: number, pad: number, opt: boolean, c = n) {
+  return (!opt || c >= 1) ? String(n).padStart(pad, '0') : ''
+}
+
+function funit(num: number, total: number, pad: number, opt: boolean) {
+  return fprint(Math.abs(num), pad, opt, Math.abs(total))
+}
+
+function ftunit(total: number, pad: number, opt: boolean) {
+  return fprint(Math.trunc(Math.abs(total)), pad, opt)
+}
+
+const matches: Record<string, (ts: TimeSpan, pad: number, opt: boolean) => string> = {
   '+': ({ totalMilliseconds: ms }) => (ms.value >= 0) ? '+' : '-',
   '-': ({ totalMilliseconds: ms }) => (ms.value < 0) ? '-' : '',
-  'd': (ts, pad, opt) => (!opt || Math.abs(ts.totalDays.value) >= 1) ? String(Math.abs(ts.days.value)).padStart(pad, '0') : '',
-  'h': (ts, pad, opt) => (!opt || Math.abs(ts.totalHours.value) >= 1) ? String(Math.abs(ts.hours.value)).padStart(pad, '0') : '',
-  'm': (ts, pad, opt) => (!opt || Math.abs(ts.totalMinutes.value) >= 1) ? String(Math.abs(ts.minutes.value)).padStart(pad, '0') : '',
-  's': (ts, pad, opt) => (!opt || Math.abs(ts.totalSeconds.value) >= 1) ? String(Math.abs(ts.seconds.value)).padStart(pad, '0') : '',
-  'S': (ts, pad, opt) => {
-    const s = Math.trunc(Math.abs(ts.totalSeconds.value))
-    return (!opt || s >= 1) ? String(s).padStart(pad, '0') : ''
-  },
+  'd': (ts, pad, opt) => funit(ts.days.value, ts.totalDays.value, pad, opt),
+  'D': (ts, pad, opt) => ftunit(ts.totalDays.value, pad, opt),
+  'h': (ts, pad, opt) => funit(ts.hours.value, ts.totalHours.value, pad, opt),
+  'H': (ts, pad, opt) => ftunit(ts.totalHours.value, pad, opt),
+  'm': (ts, pad, opt) => funit(ts.minutes.value, ts.totalMinutes.value, pad, opt),
+  'M': (ts, pad, opt) => ftunit(ts.totalMinutes.value, pad, opt),
+  's': (ts, pad, opt) => funit(ts.seconds.value, ts.totalSeconds.value, pad, opt),
+  'S': (ts, pad, opt) => ftunit(ts.totalSeconds.value, pad, opt),
   'f': (ts, pad, opt) => {
     const ms = String(Math.trunc(Math.abs(ts.milliseconds.value))).padStart(3, '0').slice(0, pad)
     return (!opt || !/^0+$/.test(ms)) ? ms : ''
@@ -100,7 +112,7 @@ export const formatTimeSpan = (ts: TimeSpan, formatStr: string) => {
   return formatStr.replace(REGEX_OPT_FORMAT, (_, $1, $2, $3, $4, $5) => {
     const f = matches[$3[0]](ts, $3.length, true)
     return f ? `${$1 ?? $2 ?? ''}${f}${$4 ?? $5 ?? ''}` : ''
-  }).replace(REGEX_FORMAT, (match, $1, $2) => $1 || $2 || matches[match[0]](ts, match.length))
+  }).replace(REGEX_FORMAT, (match, $1, $2) => $1 || $2 || matches[match[0]](ts, match.length, false))
 }
 
 const REGEX_SPARSE = /^([+-])?(?:(\d+(?:\.\d+)?)d)?(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)m)?(?:(\d+(?:\.\d+)?)s)?(?:(\d+(?:\.\d+)?)ms)?$/i
