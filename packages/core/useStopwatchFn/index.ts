@@ -21,7 +21,7 @@ function roundTime(time: number, interval: number, trunc = false) {
 export function useStopwatchFn(options: UseStopwatchFnOptions = {}) {
   const {
     immediate = true,
-    interval = 1000,
+    interval = 10,
     timeRound = true,
     callback,
   } = options

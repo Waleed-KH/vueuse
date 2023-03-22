@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useTimer } from '@vueuse/core'
 
-const { timespan, start, stop, pause, resume, state } = useTimer(100000000, {
-  interval: 10, immediate: false, stopOnFinish: false,
+const { timespan, start, stop, pause, resume, state } = useTimer(100000, {
+  interval: 1000, immediate: false, stopOnFinish: false,
 })
 </script>
 

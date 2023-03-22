@@ -12,8 +12,9 @@ export interface UseTimerOptions extends UseStopwatchFnOptions {
 
 export function useTimer(time: MaybeComputedRef<number> | TimeSpan, options: UseTimerOptions = {}) {
   const {
+    interval = 10,
     stopOnFinish = true,
-    defaultFormat = '-[HH\\:]mm:ss.ff',
+    defaultFormat = `-[HH\\:]mm:ss${(interval === 'requestAnimationFrame' || interval % 1000) ? '.ff' : ''}`,
   } = options
 
   const {
